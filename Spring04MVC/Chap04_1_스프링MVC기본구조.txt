@@ -1,0 +1,82 @@
+#1. 스프링 MVC 설정 = 여기서는 XML 방식 사용
+ : 스프링 프레임워크에서 웹관련 스프링 라이브러리 = 스프링 MVC => 웹개발시 필수적으로 사용되는 구조
+   전자정부 표준 프레임워크 = 스프링 프레임워크 + 스프링 MVC를 이용 => 공공 프로젝트에서 표준으로 사용됨
+   
+#2. 스프링 MVC 기본구조
+ : 스프링 MVC = 스프링 프레임워크 메인 프로젝트의 서브 프로젝트 중 하나임
+   스프링 = 하나의 기능을 위해 만들어진 프레임워크가 아니라, 여러 서브 프로젝트를 결합해 다양한 상황에 대처할수 있도록 만들어짐
+   서브프로젝트 = 별도의 설정이 존재할 수 있다는 개념임
+   (예) Lagacy Project에는 servlet-context.xml, root-context.xml로 설정파일이 분리됨
+   
+   #. XML 설정시 구조
+     Spring MVC = servlet-context.xml
+     Spring Core 와 MyBatis = root-context.xml
+     DB
+     
+#3. 스프링 MVC 프로젝트 내부구조
+  : 스프링 MVC 프로젝트를 구성하다는 의미
+    a. 내부적으로 
+       = root-context.xml 사용하는 일반 Java영역(POJO=PlanOldJavaObject)과
+         servlet-context.xml 로 설정하는 Web관련영역을 같이 연동해서 구동함
+    b. 바깥쪽에는
+       = WebApplicationContext 가 존재 = 기존 구조에 MVC 설정을 포함하는 구조로 만들어짐 => MVC + 일반적 설정 둘다 갖고 있음
+  (참조) web.xml = Tomcat 구동과 관련된 설정
+        root-context.xml, servlet-context.xml = 스프링과 관련된 설정
+    
+#4. 스프링 프로젝트 구동 방식
+  #a. WEB-INF > web.xml에서 시작 
+      => root-context.xml 경로, servlet-context.xml 경로
+      => ContextLoaderListener 동작 => 해당 웹 애플리케이션 구동시 같이 동작함 => 로그 먼저 출력
+  #b. root-context.xml 처리되면 파일에 정의된 빈(Bean) 설정들이 동작
+      = 스프링 영역(Context)안에 생성되고, 객체들 간의 의존성이 처리됨
+  #c. root-context.xml이 처리된 후
+      = 스프링 MVC에서 사용하는 [DispatcherServlet]이 동작함 => web.xml에 설정되어 있음
+        => DispatcherServlet 클래스 = 스프링MVC 구조에서 가장 핵심적인 역할을 하는 클래스로 지시만 함.
+           = 내부적으로 웹 관련 처리의 준비작업을 진행하는 데, 이떄 사용하는 파일이 servlet-context.xml임
+  #d. (web.xml) DispatcherServlet에서
+      = XmlWebApplicationContext를 이용 (코딩되어 있지 않고 내부적으로 자동처리)
+        => servlet-context.xml을 로딩, 해석하기 시작하고
+           = 이 과정에서 등록된 객체(Bean)들은 root-context.xml, servlet-context.xml에서 정의된 Bean들과
+             => 기존의 만들어진 객체(Bean)들이 같이 연동됨
+    
+#5. 스프링MVC 기본 사상
+  # 스프링MVC를 이용하면
+    = 개발자는 직접적으로 HttpServletRequest/HttpServletResponse 같은 Servlet/JSP의 API를 사용할 필요성이 줄어듦
+    = 스프링은 중간에 연결 역할을 하므로, 개발자는 코드를 작성하지 않고도 원하는 기능을 구현할 수 있음
+    = 개발자 코드는 스프링MVC에서 동작하므로 최근 개발에서는 어노테이셔이나 XML등의 설정만으로도 개발이 가능하게 됨 (스프링 2.5버전이후)
+    
+#6. 스프링MVC 기본 구조
+0. Request -> 1. DispatcherServlet(프론트컨트롤러) <--> 2. HandlerMapping
+                                                <--> 3. HandlerAdpter <--> 4. Controller
+                                                <--> 5. ViewResolver
+                                                --> 6. View (JSP 및 기타)
+                                                <-- 7. Response 마무리
+#7. 스프링MVC 기본 구조 설정
+  0. 사용자 Request 요청
+  1. Front-Controller DispaterServlet을 통해 처리
+     = web.xml에 설정 => 모든 Request를 DispaterServlet이 받도록 처리
+  2. HandlerMapping
+     = Request의 처리를 담당하는 컨트롤러를 찾기 위해 존재
+     = HandlerMapping 인터페이스를 구현한 여러 객체들 중 개발자가 @RequestMapping 어노테이션이 적용된 것 기준으로 찾음
+  3. HandlerAdapter
+     = HandlerAdapter를 이용하여 해당 컨트롤러 동작시킴
+  4. Controller
+     = 개발자가 직접 작성하는 클래스
+     = 실제 Request를 처리하는 로직을 작성하게 됨
+     = 이때 View에 전달하는 데이터 => 주로 Model 이라는 객체에 담아서 전달
+     = Controller는 다양한 타입의 결과를 반환함 => 이에 대한 처리는 ViewResolver를 이용
+  5. ViewResolver
+     = Controller가 반환한 결과를 => 어떤 View를 통해서 처리하는것이 좋을지 해석하는 역할
+                               => servlet-context.xml에 InternalResourceViewResolver임 
+  6. View
+     = 실제 응답 보내야 하는 데이터 => JSP등을 이용해서 생성하는 역할
+  7. Response
+     = 만들어진 응답은 DispaterServlet를 통해서 전달  
+        
+       
+    
+    
+    
+    
+    
+    
